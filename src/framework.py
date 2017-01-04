@@ -22,6 +22,9 @@ import random
 funny = random.sample(["Aliens", "Clowns", "Mr. Robot",
                        "Zero Cool", "Goats", "Hackers", "Unicorns"], 1)[0]
 
+# batch install?
+perform_batch = False
+
 # blank variables used later
 deb_modules = ""
 arch_modules = ""
@@ -473,6 +476,9 @@ def find_containing_file(directory, location):
         
                     
 def handle_prompt(prompt):
+    # specify no commands, if counter increments then a command was found
+    base_counter = 0
+
     # main help menu
     if prompt == "?" or prompt == "help":
         show_help_menu()
@@ -513,12 +519,15 @@ def handle_prompt(prompt):
         # do a quick sanity check to see if the module is there first
         if "install_update_all" in prompt[1]:
             counter = 3
-            try:
-                install_query = input(
-                    "[*] You are about to install/update everything. Proceed? [yes/no]:")
-            except EOFError:
-                install_query = "no"
-                print("")
+            if not perform_batch:
+                try:
+                    install_query = input(
+                        "[*] You are about to install/update everything. Proceed? [yes/no]:")
+                except EOFError:
+                    install_query = "no"
+                    print("")
+            else:
+                install_query = "yes"
             if install_query.lower() == "yes" or install_query.lower() == "y":
 
                 # do auto update check first
@@ -660,6 +669,24 @@ def handle_prompt(prompt):
                                 print ("Updating %s") % module
                                 use_module(module, 2)
 
+        if "install_update_selected" in prompt[1]:
+            counter = 3
+            request = prompt[2].split(',')
+            modules_path = definepath() + "/" + (prompt[1])[:-23]
+            perform_batch = True
+            for path, subdirs, files in os.walk(modules_path):
+                for subdir in subdirs:
+                    if subdir in request:
+                        print 'installing group %s'%subdir
+                        use_module("modules/%s/install_update_all"%subdir,1)
+                for name in files:
+                    if name[:-3] in request:
+                        fullpath = os.path.join(path, name)
+                        print 'installing module %s'%name[:-3]
+                        module = fullpath[len(modules_path):-len(name)-1]
+                        use_module("modules/%s/%s"%(module,name[:-3]),1)
+
+
         if os.path.isfile(definepath() + "/" + prompt[1] + ".py"):
             counter = 1
 
@@ -687,9 +714,6 @@ def handle_prompt(prompt):
 def mainloop():
 
     while 1:
-        # specify no commands, if counter increments then a command was found
-        base_counter = 0
-
         # set title
         set_title("The PenTesters Framework (PTF) v%s" % grab_version)
 
